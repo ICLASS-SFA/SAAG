@@ -1,0 +1,53 @@
+---
+# Parallel processing set up
+run_parallel: 1
+nprocesses: 128  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'
+
+# Start/end date and time
+# startdate: '20140301.0000'
+# enddate: '20140401.0000'
+startdate: '20140401.0000'
+enddate: '20140402.0000'
+
+root_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/'
+out_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/'
+in_basename: 'auxhist_d01_'
+out_basenbame: 'refl_'
+# Constant file
+map_file: '/pscratch/sd/f/feng045/SAAG/hist/maps/wrfconstants_SAAG_20yr.nc'
+
+# Specify input data date/time string format
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+
+# # Variable list to subset
+pass_varname:
+  - 'REFL_COM'
+#   - 'OLR'
+
+# Subset domain
+# center_lon: -59.9914
+# center_lat: -3.1489
+# subset_width: 2.0  # [degree]
+# Should be center around a radar site with ~2 x 2 degree
+# lonmin: -62.00
+# lonmax: -58.00
+# latmin: -5.15
+# latmax: -1.15
+# 3.5 x 3.5 degree
+lonmin: -61.75
+lonmax: -58.25
+latmin: -4.9
+latmax: -1.4
+
+# Variable names in the output data
+time_dimname: 'time'
+x_dimname: 'lon'
+y_dimname: 'lat'
+time_coordname: 'time'
+x_coordname: 'longitude'
+y_coordname: 'latitude'
+tb_varname: 'tb'
+pcp_varname: 'rainrate'
