@@ -52,15 +52,10 @@ def subset_vars(filepairnames, config):
             Returns status = 1 if success.
     """
 
-    # regrid_input = config.get('regrid_input', False)
-    # write_native = config.get('write_native', False)
     out_dir = config.get("out_dir")
     # Map file
     map_file = config.get("map_file")
     # Subset domain
-    # center_lon = config.get("center_lon")
-    # center_lat = config.get("center_lat")
-    # subset_width = config.get("subset_width")
     lonmin = config.get("lonmin")
     lonmax = config.get("lonmax")
     latmin = config.get("latmin")
@@ -71,12 +66,9 @@ def subset_vars(filepairnames, config):
     time_dimname = config.get("time_dimname")
     x_dimname = config.get("x_dimname")
     y_dimname = config.get("y_dimname")
-    # t_dimname = config.get("time_dimname")
     time_coordname = config.get("time_coordname")
     x_coordname = config.get("x_coordname")
     y_coordname = config.get("y_coordname")
-    # x_varname = config.get("x_varname")
-    # y_varname = config.get("y_varname")
     tb_varname = config.get("tb_varname")
     pcp_varname = config.get("pcp_varname")
     pass_varname = config.get("pass_varname", None)
@@ -88,22 +80,6 @@ def subset_vars(filepairnames, config):
     filein_t2 = filepairnames[1]
     print(f'Reading input f2: {filein_t2}')
 
-    # # Get filename
-    # fname_t1 = os.path.basename(filein_t1)
-    # fname_t2 = os.path.basename(filein_t2)
-
-    # # Get basename string position
-    # idx0 = fname_t1.find(in_basename)
-    # ftime_t2 = fname_t2[idx0+len(in_basename):]
-    # # Output filename
-    # fileout = f'{out_dir}/{out_basename}{ftime_t2}.nc'
-
-    # # Output for native resolution
-    # if (regrid_input) & (write_native):
-    #     out_dir_native = f'{out_dir}/native/'
-    #     fileout_native = f'{out_dir_native}/{out_basename}{ftime_t2}.nc'
-    #     # Create output directory
-    #     os.makedirs(out_dir_native, exist_ok=True)
 
     # Read in map file
     dsmap = xr.open_dataset(map_file).squeeze()
@@ -114,10 +90,6 @@ def subset_vars(filepairnames, config):
     DY = dsmap.attrs['DY']
 
     # Make a 2D mask for subset
-    # lonmin = center_lon - subset_width
-    # lonmax = center_lon + subset_width
-    # latmin = center_lat - subset_width
-    # latmax = center_lat + subset_width
     mask = ((XLONG >= lonmin) & (XLONG <= lonmax) & \
             (XLAT >= latmin) & (XLAT <= latmax)).squeeze()
     # Get y/x indices limits from the mask
@@ -226,7 +198,6 @@ def subset_vars(filepairnames, config):
             # Loop over each pass out variable list
             for ivar in pass_varname:
                 var_dict[ivar] = ([time_dimname, y_dimname, x_dimname], np.expand_dims(dsp[ivar].data, 0), dsp[ivar].attrs)
-        # import pdb; pdb.set_trace()
 
         # Define xarray dataset
         dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
@@ -242,23 +213,13 @@ def subset_vars(filepairnames, config):
         dsout[tb_varname].attrs['units'] = 'K'
         dsout[pcp_varname].attrs['long_name'] = 'Precipitation rate'
         dsout[pcp_varname].attrs['units'] = 'mm hr-1'
-        # Write to netcdf file
-        # encoding = {
-        #     time_dimname: {'zlib': True, 'dtype': 'float'},
-        #     # 'Times':{'zlib':True},
-        #     x_coordname: {'zlib': True, 'dtype': 'float32'},
-        #     y_coordname: {'zlib': True, 'dtype': 'float32'},
-        #     tb_varname: {'zlib': True, 'dtype': 'float32'},
-        #     pcp_varname: {'zlib': True, 'dtype': 'float32'},
-        # }
+
         # Set encoding/compression for all variables
         comp = dict(zlib=True)
         encoding = {var: comp for var in dsout.data_vars}
         # Write to netcdf file
         dsout.to_netcdf(path=filename_out, mode='w', format='NETCDF4', unlimited_dims=time_dimname, encoding=encoding)
         print(f'{filename_out}')
-
-        # import pdb; pdb.set_trace()
     return
 
 
@@ -273,8 +234,6 @@ if __name__=='__main__':
     
     startdate = config.get("startdate")
     enddate = config.get("enddate")
-    # start_year = 2000
-    # end_year = 2000
 
     # Parallel setup
     run_parallel = config.get("run_parallel")
@@ -288,23 +247,6 @@ if __name__=='__main__':
     in_basename = config.get("in_basename")
     out_basenbame = config.get("out_basenbame")
     time_format = config.get("time_format")
-    # # Map file
-    # map_file = config.get("map_file")
-    # # Subset domain
-    # center_lon = config.get("center_lon")
-    # center_lat = config.get("center_lat")
-    # subset_width = config.get("subset_width")
-
-    # # Get parameters from config
-
-    # time_dimname = config.get("time_dimname")
-    # x_dimname = config.get("x_dimname")
-    # y_dimname = config.get("y_dimname")
-    # t_dimname = config.get("time_dimname")
-    # x_coordname = config.get("x_coordname")
-    # y_coordname = config.get("y_coordname")
-    # x_varname = config.get("x_varname")
-    # y_varname = config.get("y_varname")
 
     # Identify files to process
     in_year = startdate[0:4]
@@ -326,18 +268,6 @@ if __name__=='__main__':
     filelist = infiles_info[0]
     nfiles = len(filelist)
     print(f'Number of WRF files: {nfiles}')
-
-    # # Find all input files
-    # filelist = []
-    # for iyear in range(start_year, end_year+1):
-    #     files = sorted(glob.glob(f'{root_dir}/{iyear}/{in_basename}*'))
-    #     filelist.extend(files)
-    # nfiles = len(filelist)
-    # print(f'Number of WRF files: {nfiles}')
-
-    # # For testing
-    # filelist = filelist[0:16]
-    # nfiles = len(filelist)
 
     # Create a list with a pair of WRF filenames that are adjacent in time
     filepairlist = []
@@ -368,5 +298,3 @@ if __name__=='__main__':
         final_result = dask.compute(*results)
     else:
         sys.exit('Valid parallelization flag not provided')
-
-    # import pdb; pdb.set_trace()

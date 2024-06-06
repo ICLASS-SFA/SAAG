@@ -7,8 +7,8 @@ dask_tmp_dir: '/tmp'
 # Start/end date and time
 # startdate: '20140301.0000'
 # enddate: '20140401.0000'
-startdate: '20140401.0000'
-enddate: '20140402.0000'
+startdate: '20140101.0000'
+enddate: '20141231.2359'
 
 root_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/'
 out_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/'
@@ -22,10 +22,15 @@ map_file: '/pscratch/sd/f/feng045/SAAG/hist/maps/wrfconstants_SAAG_20yr.nc'
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyy-mo-dd_hh:mm:ss'
 
-# # Variable list to subset
+# Addtional variable list to include in the subset
 pass_varname:
   - 'REFL_COM'
-#   - 'OLR'
+  # - 'AFWA_CAPE_MU'
+  # - 'AFWA_CIN_MU'
+  # - 'T2'
+  # - 'Q2'
+  # - 'U10'
+  # - 'V10'
 
 # Subset domain
 # center_lon: -59.9914
