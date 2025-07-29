@@ -4,18 +4,21 @@ run_parallel: 1
 nprocesses: 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'
 
+# Chunking parameters optimized for AMD EPYC 7763 (128 cores, 512GB RAM)
+chunk_size: 21  # Number of file pairs per chunk (21 = 3 weeks of daily files)
+max_concurrent_chunks: 12  # Maximum number of chunks to process simultaneously
+
 # Start/end date and time
-startdate: '20150101.0000'
-enddate: '20151231.2359'
-# startdate: '20140101.0000'
-# enddate: '20141231.2359'
+# startdate: '20150101.0000'
+# enddate: '20151231.2359'
+startdate: '20140101.0000'
+enddate: '20141231.2359'
 
 root_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/'
 out_dir: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/'
 in_basename: 'auxhist_d01_'
 out_basenbame: 'refl_'
 # Constant file
-# map_file: '/pscratch/sd/f/feng045/SAAG/hist/maps/wrfconstants_SAAG_20yr.nc'
 map_file: '/global/cfs/cdirs/m1657/gsharing/SAAG/WRF4KM_2000-2020/wrf2d_wrf3d/wrfconstants_SAAG_20yr.nc'
 
 # Specify input data date/time string format

@@ -1,1 +1,0 @@
-ncks -O -v Times,XLAT,XLONG,OLR,RAINNC,I_RAINNC /global/cfs/cdirs/m1657/gsharing/SAAG/WRF4KM_2000-2020/2022/wrfout_d01_2022-01-01_00:00:00 /pscratch/sd/f/feng045/SAAG/hist/2022/wrfout_d01_2022-01-01_00:00:00

@@ -72,6 +72,7 @@ def subset_vars(filepairnames, config):
     tb_varname = config.get("tb_varname")
     pcp_varname = config.get("pcp_varname")
     pass_varname = config.get("pass_varname", None)
+    out_basenbame = config.get("out_basenbame")
 
     # Filenames with full path
     filein_t1 = filepairnames[0]
@@ -112,7 +113,7 @@ def subset_vars(filepairnames, config):
     Times = ds_in['Times'].load()
     ntimes = len(Times)
     Times_str = []
-    basetimes = np.full(ntimes, np.NAN, dtype=float)
+    basetimes = np.full(ntimes, np.nan, dtype=float)
     dt64 = np.empty(ntimes, dtype='datetime64[ns]')
     for tt in range(0, ntimes):
         # Decode bytes to string with UTF-8 encoding, then replace "_" with "T"
@@ -223,6 +224,40 @@ def subset_vars(filepairnames, config):
     return
 
 
+def process_chunk(filepair_chunk, config, chunk_id):
+    """
+    Process a chunk of daily file pairs
+    
+    Args:
+        filepair_chunk: list
+            List of daily file pairs to process in this chunk
+        config: dict
+            Configuration dictionary
+        chunk_id: int
+            Chunk identifier for logging
+    
+    Returns:
+        tuple: (chunk_id, n_processed, n_failed)
+    """
+    print(f'Processing chunk {chunk_id} with {len(filepair_chunk)} daily file pairs')
+    print(f'  Expected output files for this chunk: ~{len(filepair_chunk) * 96}')
+    n_processed = 0
+    n_failed = 0
+    
+    for i, filepair in enumerate(filepair_chunk):
+        try:
+            subset_vars(filepair, config)
+            n_processed += 1
+            print(f'Chunk {chunk_id}: Processed daily pair {i + 1}/{len(filepair_chunk)}')
+            # Optionally show filenames: ({os.path.basename(filepair[0])} + {os.path.basename(filepair[1])})
+        except Exception as e:
+            print(f'ERROR in chunk {chunk_id}, daily file pair {i}: {e}')
+            n_failed += 1
+    
+    print(f'Chunk {chunk_id} completed: {n_processed} daily pairs processed, {n_failed} failed')
+    return chunk_id, n_processed, n_failed
+
+
 if __name__=='__main__':
 
     # Load configuration file
@@ -239,6 +274,10 @@ if __name__=='__main__':
     run_parallel = config.get("run_parallel")
     nprocesses = config.get("nprocesses")
     dask_tmp_dir = config.get("dask_tmp_dir")
+    
+    # Chunking parameters - can be added to config file
+    chunk_size = config.get("chunk_size", 14)  # Default: process 14 daily file pairs per chunk (2 weeks)
+    max_concurrent_chunks = config.get("max_concurrent_chunks", min(8, nprocesses // 16))  # Limit concurrent chunks
 
     # Subset time frequency
     # subset_freq = '1H'
@@ -275,26 +314,97 @@ if __name__=='__main__':
         ipair = [filelist[ii], filelist[ii+1]]
         filepairlist.append(ipair)
     nfilepairs = len(filepairlist)
+    print(f'Number of file pairs to process: {nfilepairs}')
 
-    # Setup Dask cluster
+    # Break file pairs into chunks
+    chunks = []
+    for i in range(0, nfilepairs, chunk_size):
+        chunk = filepairlist[i:i + chunk_size]
+        chunks.append(chunk)
+    n_chunks = len(chunks)
+    print(f'Split into {n_chunks} chunks of approximately {chunk_size} daily file pairs each')
+    print(f'Each daily file pair produces ~96 output files (15-min intervals)')
+    print(f'Estimated total output files: {nfilepairs * 96}')
+
+    # Setup Dask cluster with optimized settings
     if run_parallel == 1:
         # Set Dask temporary directory for workers
         dask.config.set({'temporary-directory': dask_tmp_dir})
-        # Local cluster
-        cluster = LocalCluster(n_workers=nprocesses, threads_per_worker=1)
+        # Configure Dask for better memory management on high-memory systems
+        dask.config.set({
+            'array.chunk-size': '128MB',  # Larger chunks for high-memory system
+            'distributed.worker.memory.target': 0.75,  # More conservative for stability
+            'distributed.worker.memory.spill': 0.85,
+            'distributed.worker.memory.pause': 0.9,
+            'distributed.worker.memory.terminate': 0.95,
+            'distributed.scheduler.allowed-failures': 3,  # Allow some task failures
+            'distributed.scheduler.retry-policy': True,
+        })
+        
+        # Optimize cluster for AMD EPYC with high core count and memory
+        # Use fewer workers with more memory each for better efficiency
+        n_workers = min(nprocesses // 2, 32)  # Use 64 workers max, with 2 cores each
+        threads_per_worker = max(1, nprocesses // n_workers)
+        memory_per_worker = min(15, 512 // n_workers)  # Up to 15GB per worker
+        
+        cluster = LocalCluster(
+            n_workers=n_workers, 
+            threads_per_worker=threads_per_worker,
+            memory_limit=f'{memory_per_worker}GB',
+            dashboard_address=':8787',
+            processes=True,  # Use processes for better isolation
+            silence_logs=False,  # Keep logs for debugging
+        )
         client = Client(cluster)
+        print(f'Dask cluster: {n_workers} workers × {threads_per_worker} threads = {n_workers * threads_per_worker} total cores')
+        print(f'Memory per worker: {memory_per_worker}GB, Total memory: {n_workers * memory_per_worker}GB')
+        print(f'Dask dashboard available at: {client.dashboard_link}')
 
     if run_parallel == 0:
         # Serial version
-        for ifile in range(0, nfilepairs):
-            status = subset_vars(filepairlist[ifile], config)
+        print('Running in serial mode...')
+        total_processed = 0
+        total_failed = 0
+        for chunk_id, chunk in enumerate(chunks):
+            _, n_processed, n_failed = process_chunk(chunk, config, chunk_id)
+            total_processed += n_processed
+            total_failed += n_failed
+        print(f'Serial processing completed: {total_processed} processed, {total_failed} failed')
 
     elif run_parallel >= 1:
-        # Parallel
-        results = []
-        for ifile in range(0, nfilepairs):
-            result = dask.delayed(subset_vars)(filepairlist[ifile], config)
-            results.append(result)
-        final_result = dask.compute(*results)
+        # Parallel processing with chunked approach
+        print(f'Running in parallel mode with {n_chunks} chunks...')
+        total_processed = 0
+        total_failed = 0
+        
+        # Process chunks in batches to avoid overwhelming the scheduler
+        for batch_start in range(0, n_chunks, max_concurrent_chunks):
+            batch_end = min(batch_start + max_concurrent_chunks, n_chunks)
+            batch_chunks = chunks[batch_start:batch_end]
+            
+            print(f'Processing batch {batch_start//max_concurrent_chunks + 1}: chunks {batch_start} to {batch_end-1}')
+            
+            # Create delayed tasks for this batch
+            batch_results = []
+            for chunk_id, chunk in enumerate(batch_chunks, start=batch_start):
+                result = dask.delayed(process_chunk)(chunk, config, chunk_id)
+                batch_results.append(result)
+            
+            # Compute this batch and collect results
+            batch_outputs = dask.compute(*batch_results)
+            
+            # Aggregate results
+            for chunk_id, n_processed, n_failed in batch_outputs:
+                total_processed += n_processed
+                total_failed += n_failed
+            
+            print(f'Batch completed. Running totals: {total_processed} processed, {total_failed} failed')
+        
+        print(f'All parallel processing completed: {total_processed} processed, {total_failed} failed')
+        
+        # Close the client and cluster
+        client.close()
+        cluster.close()
+        
     else:
         sys.exit('Valid parallelization flag not provided')
