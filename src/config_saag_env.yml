@@ -1,6 +1,6 @@
 ---
 # Run in parallel
-run_parallel: 0
+run_parallel: 1
 # Number of workers for Dask
 # n_workers: 24  # For 3D calculations
 n_workers: 32
@@ -27,6 +27,8 @@ stats_path: /global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/SAAG_mask/stats
 pixelfile_path: /global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/SAAG_mask/celltracking/
 # 3D wrfout file directory
 # metfile_path: /pscratch/sd/i/iclas2/SAAG/WRF4KM_2000-2020/
+# WRF grid file
+wrf_gridfile: /pscratch/sd/i/iclas2/SAAG/WRF4KM_2000-2020/wrf_landmask.nc
 # Raw WRF output file directory
 wrfout_path: /pscratch/sd/i/iclas2/SAAG/WRF4KM_2000-2020/
 # Output file directory
@@ -55,7 +57,11 @@ core_expand_dist: 1
 # Buffer radius to expand the cell mask to get the core shell / perimeter
 core_shell_buffer_radius: 20  # [km]
 # Number of hours prior to initiation to extract environment
-nhours: 1
+# Note: This parameter is not used in the simplified version
+# The script extracts only 1 time point per track:
+# - CI at :00 min → extracts prior hour
+# - CI at :15,:30,:45 min → extracts same hour at :00
+nhours: 0
 # Set domain size to extract environment
 # Number of grid point in lon/lat dimension [center-nx, center+nx], [center-ny, center+ny]
 # nx: 12
