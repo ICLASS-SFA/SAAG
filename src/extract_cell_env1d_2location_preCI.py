@@ -141,7 +141,7 @@ def extract_env_prof(
         # 3D Variables
         height = (dsm['PH'] + dsm['PHB']) / 9.81
         pressure = dsm['P'] + dsm['PB']
-        tk = dsm['T'] + dsm['T00']
+        theta = dsm['T'] + 300  # corrected from adding T00
         qv = dsm['QVAPOR']
         # rh = dsm['RH']
         umet = dsm['U']
@@ -164,7 +164,7 @@ def extract_env_prof(
         for key in attrs_to_remove:
             height.attrs.pop(key, None)
             pressure.attrs.pop(key, None)
-            tk.attrs.pop(key, None)
+            theta.attrs.pop(key, None)
             qv.attrs.pop(key, None)
             # rh.attrs.pop(key, None)
             umet.attrs.pop(key, None)
@@ -183,10 +183,10 @@ def extract_env_prof(
         # Save variable attributes
         # pressure_attrs = pressure.attrs
         # height_attrs = height.attrs
-        # temperature_attrs = tk.attrs
+        # theta_attrs = theta.attrs
         pressure_attrs = {'description': 'Pressure', 'units': 'Pa'}
         height_attrs = {'description': 'Height', 'units': 'm'}
-        temperature_attrs = {'description': 'Potential temperature', 'units': 'K'}
+        theta_attrs = {'description': 'Potential temperature', 'units': 'K'}
         qv_attrs = qv.attrs
         # rh_attrs = rh.attrs
         u_attrs = umet.attrs
@@ -204,7 +204,7 @@ def extract_env_prof(
         # Create empty attributes
         pressure_attrs = ''
         height_attrs = ''
-        temperature_attrs = ''
+        theta_attrs = ''
         qv_attrs = ''
         # rh_attrs = ''
         u_attrs = ''
@@ -283,7 +283,7 @@ def extract_env_prof(
                 # Extract value at fixed site location
                 if (fixlat_idx <= ny_d) & (fixlon_idx <= nx_d):
                     # 3D mass grid variables
-                    out_T[itrack, :, 0] = tk.isel({ydimname:fixlat_idx, xdimname:fixlon_idx}).data
+                    out_T[itrack, :, 0] = theta.isel({ydimname:fixlat_idx, xdimname:fixlon_idx}).data
                     out_P[itrack, :, 0] = pressure.isel({ydimname:fixlat_idx, xdimname:fixlon_idx}).data
                     out_QV[itrack, :, 0] = qv.isel({ydimname:fixlat_idx, xdimname:fixlon_idx}).data
                     # out_RH[itrack, :, 0] = rh.isel({ydimname:fixlat_idx, xdimname:fixlon_idx}).data
@@ -310,7 +310,7 @@ def extract_env_prof(
                 # Extract value at track center location
                 if (lat_idx <= ny_d) & (lon_idx <= nx_d):
                     # 3D mass grid variables
-                    out_T[itrack, :, 1] = tk.isel({ydimname:lat_idx, xdimname:lon_idx}).data
+                    out_T[itrack, :, 1] = theta.isel({ydimname:lat_idx, xdimname:lon_idx}).data
                     out_P[itrack, :, 1] = pressure.isel({ydimname:lat_idx, xdimname:lon_idx}).data
                     out_QV[itrack, :, 1] = qv.isel({ydimname:lat_idx, xdimname:lon_idx}).data
                     # out_RH[itrack, :, 1] = rh.isel({ydimname:lat_idx, xdimname:lon_idx}).data
@@ -338,7 +338,7 @@ def extract_env_prof(
         out_dict3d = {
             'pressure': out_P,
             'height': out_Z,
-            'temperature': out_T,
+            'potential_temperature': out_T,
             'qv': out_QV,
             # 'rh': out_RH,
             'u': out_U,
@@ -374,7 +374,7 @@ def extract_env_prof(
         out_dict_attrs = {
             'pressure': pressure_attrs,
             'height': height_attrs,
-            'temperature': temperature_attrs,
+            'potential_temperature': theta_attrs,
             'qv': qv_attrs,
             # 'rh': rh_attrs,
             'u': u_attrs,
@@ -496,7 +496,7 @@ if __name__ == '__main__':
     dsstats = xr.open_dataset(trackstats_file, decode_times=True)
 
     # # TODO: test subsetting a small number of tracks to speed up development
-    # dsstats = dsstats.isel({tracks_dimname: slice(0, 10)})
+    # dsstats = dsstats.isel({tracks_dimname: slice(0, 32)})
 
     # Subset stats times to reduce array size
     ntracks = dsstats.sizes[tracks_dimname]

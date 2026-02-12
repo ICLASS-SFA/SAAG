@@ -12,6 +12,8 @@ dask_tmp_dir: '/tmp'
 # enddate: 'ENDDATE.0000'
 startdate: '20140101.0000'
 enddate: '20150101.0000'
+# startdate: '20150101.0000'
+# enddate: '20160101.0000'
 # # Ensemble member name
 # ensmember: 'ENSMEMBER'
 # # wrfout domain name (d01: 500m, d02: 100m)
